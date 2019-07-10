@@ -5,30 +5,37 @@ import h3d.Vector;
 class Main extends hxd.App {
 	var skyTexture:h3d.mat.Texture;
 	//
-	var timer:Timer;
-	var time = 0;
-	//
 	var cameraPos:Vector;
-	var cameraTarget:Vector;
+	var cameraFront:Vector;
 	var cameraDirection:Vector;
+	//
 	var cameraUp:Vector;
 	var cameraRight:Vector;
+	//
+	var yaw:Float;
+	var pitch:Float;
+	//
+	var lastX:Float;
+	var lastY:Float;
+	//
+	var sensitivity = 1;
 
 	override function init() {
-		this.cameraPos = new Vector(0.0, 0.0, 0.0);
-		this.cameraTarget = new Vector(0.0, 1.0, 0.0);
+		this.cameraPos = new Vector(0.0, 0, 0.0);
 
-		this.cameraDirection = this.cameraPos.sub(this.cameraTarget);
+		this.cameraFront = new Vector(0.0, -1.0, 0.0);
+		this.cameraDirection = this.cameraPos.sub(this.cameraFront);
+
 		this.cameraDirection.normalize();
 
 		this.cameraUp = new Vector(0.0, 0.0, 1.0);
 
-		this.cameraRight = this.cameraUp.cross(cameraDirection);
+		this.cameraRight = this.cameraUp.cross(this.cameraDirection);
 		this.cameraRight.normalize();
 
-		s3d.camera.pos = cameraPos;
-		s3d.camera.up = cameraUp;
-		s3d.camera.target = cameraPos.add(cameraTarget);
+		s3d.camera.pos = this.cameraPos;
+		s3d.camera.up = this.cameraUp;
+		s3d.camera.target = this.cameraPos.add(this.cameraFront);
 
 		//
 
@@ -38,45 +45,93 @@ class Main extends hxd.App {
 		prim.addNormals();
 		prim.addUVs();
 
-		var obj2 = new Mesh(prim, s3d);
-		obj2.material.color.setColor(0xFFB280);
-		obj2.x = 0;
-		obj2.y = 10.0;
-		obj2.z = 0;
-		obj2.scale(0.6);
-		obj2.material.shadows = false;
-		
+		var mainObj = new Mesh(prim, s3d);
+		mainObj.material.color.setColor(0xFFB280);
+		mainObj.x = 0;
+		mainObj.y = -2;
+		mainObj.z = 0;
+		mainObj.scale(0.6);
+		mainObj.material.shadows = false;
+		//
+		var obj = new Mesh(prim, s3d);
+		obj.material.color.setColor(0xFF0000);
+		obj.x = 1;
+		obj.y = -2;
+		obj.z = 1;
+		obj.scale(0.6);
+		obj.material.shadows = false;
+		//
+		lastX = s2d.width / 2;
+		lastY = s2d.height / 2;
+		yaw = -90;
+		pitch = 0.0;
 	}
 
-	override function update(dt:Float) {
-		var cameraSpeed = 2.5 * dt;
+	var firstMouse = true;
 
+	override function update(dt:Float) {
+		// Camera movement
+		var cameraSpeed = 2.5 * dt;
 		if (hxd.Key.isDown(hxd.Key.W)) {
-			var temp = cameraTarget.clone();
+			var temp = this.cameraFront.clone();
 			temp.scale3(cameraSpeed);
-			cameraPos = cameraPos.add(temp);
+			this.cameraPos = this.cameraPos.add(temp);
 		}
 		if (hxd.Key.isDown(hxd.Key.S)) {
-			var temp = cameraTarget.clone();
+			var temp = this.cameraFront.clone();
 			temp.scale3(cameraSpeed);
-			cameraPos = cameraPos.sub(temp);
+			this.cameraPos = this.cameraPos.sub(temp);
 		}
 		if (hxd.Key.isDown(hxd.Key.A)) {
-			var temp = cameraTarget.cross(cameraUp);
+			var temp = this.cameraFront.cross(this.cameraUp);
 			temp.normalize();
 			temp.scale3(cameraSpeed);
-			cameraPos = cameraPos.add(temp);
+			this.cameraPos = this.cameraPos.add(temp);
 		}
 		if (hxd.Key.isDown(hxd.Key.D)) {
-			var temp = cameraTarget.cross(cameraUp);
+			var temp = this.cameraFront.cross(this.cameraUp);
 			temp.normalize();
 			temp.scale3(cameraSpeed);
-			cameraPos = cameraPos.sub(temp);
+			this.cameraPos = this.cameraPos.sub(temp);
 		}
 
-		s3d.camera.pos = cameraPos;
-		s3d.camera.up = cameraUp;
-		s3d.camera.target = cameraPos.add(cameraTarget);
+		// Look around
+
+		var xpos = s2d.mouseX;
+		var ypos = s2d.mouseY;
+		if (firstMouse) {
+			lastX = xpos;
+			lastY = ypos;
+			firstMouse = false;
+		}
+		var xoffset = xpos - lastX;
+		var yoffset = lastY - ypos;
+		lastX = xpos;
+		lastY = ypos;
+
+		xoffset *= sensitivity;
+		yoffset *= sensitivity;
+
+		yaw += xoffset;
+		pitch += yoffset;
+
+		if (pitch > 89.0) {
+			pitch = 89.0;
+		};
+		if (pitch < -89.0) {
+			pitch = -89.0;
+		};
+
+		var newDir = new Vector();
+		newDir.x = Math.cos(Math.degToRad(yaw)) * Math.cos(Math.degToRad(pitch));
+		newDir.y = Math.sin(Math.degToRad(yaw)) * Math.cos(Math.degToRad(pitch));
+		newDir.z = Math.sin(Math.degToRad(pitch));
+		newDir.normalize();
+		this.cameraFront = newDir;
+
+		s3d.camera.pos = this.cameraPos;
+		s3d.camera.up = this.cameraUp;
+		s3d.camera.target = this.cameraPos.add(this.cameraFront);
 	}
 
 	static function main() {
