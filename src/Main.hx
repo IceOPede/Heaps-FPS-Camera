@@ -1,5 +1,5 @@
+import hxd.Math;
 import h3d.scene.Mesh;
-import haxe.Timer;
 import h3d.Vector;
 
 class Main extends hxd.App {
